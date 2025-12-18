@@ -2,7 +2,6 @@ package com.ezbattlemap.dualscreen;
 
 import javax.swing.*;
 import java.awt.*;
-import java.awt.event.*;
 import java.awt.image.BufferedImage;
 import javax.imageio.ImageIO;
 import java.io.File;
@@ -15,6 +14,7 @@ public class DualScreenImageApp {
     private ControllerFrame controllerFrame;
     private DisplayFrame displayFrame;
     private BufferedImage currentImage;
+    private ImageLibrary imageLibrary;
 
     public static void main(String[] args) {
         SwingUtilities.invokeLater(() -> {
@@ -28,11 +28,22 @@ public class DualScreenImageApp {
     }
 
     public DualScreenImageApp() {
+        // Initialize image library
+        try {
+            imageLibrary = new ImageLibrary();
+        } catch (IOException e) {
+            JOptionPane.showMessageDialog(null,
+                "Error initializing image library: " + e.getMessage(),
+                "Error",
+                JOptionPane.ERROR_MESSAGE);
+            System.exit(1);
+        }
+
         GraphicsEnvironment ge = GraphicsEnvironment.getLocalGraphicsEnvironment();
         GraphicsDevice[] screens = ge.getScreenDevices();
 
         displayFrame = new DisplayFrame(this);
-        controllerFrame = new ControllerFrame(this, displayFrame);
+        controllerFrame = new ControllerFrame(this, displayFrame, imageLibrary);
 
         if (screens.length > 1) {
             Rectangle screen1Bounds = screens[0].getDefaultConfiguration().getBounds();

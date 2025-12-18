@@ -18,13 +18,14 @@ public class ControllerFrame extends JFrame {
     private boolean dragSelectMode = false;
     private int lastCellX = -1;
     private int lastCellY = -1;
+    private ImageLibraryPanel libraryPanel;
 
-    public ControllerFrame(DualScreenImageApp app, DisplayFrame displayFrame) {
+    public ControllerFrame(DualScreenImageApp app, DisplayFrame displayFrame, ImageLibrary library) {
         this.app = app;
         this.displayFrame = displayFrame;
 
         setTitle("EZBattleMap - Controller");
-        setSize(1024, 768);
+        setSize(1400, 768);
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         setLayout(new BorderLayout());
 
@@ -33,6 +34,14 @@ public class ControllerFrame extends JFrame {
 
         JPanel controlPanel = createControlPanel();
 
+        // Create image library panel on the left
+        libraryPanel = new ImageLibraryPanel(library);
+        libraryPanel.setSelectionListener((imageId, image) -> {
+            setImage(image);
+            displayFrame.setImage(image);
+        });
+
+        add(libraryPanel, BorderLayout.WEST);
         add(new JScrollPane(imagePanel), BorderLayout.CENTER);
         add(controlPanel, BorderLayout.SOUTH);
 

@@ -1,0 +1,463 @@
+package com.ezbattlemap.dualscreen;
+
+import javax.swing.*;
+import java.awt.*;
+import java.awt.event.*;
+import java.awt.image.BufferedImage;
+import java.io.*;
+import java.util.*;
+import java.util.List;
+
+/**
+ * Panel displaying the image library with thumbnails and management controls.
+ */
+public class ImageLibraryPanel extends JPanel {
+    private final ImageLibrary library;
+    private final JPanel thumbnailGrid;
+    private final JComboBox<String> categoryFilter;
+    private final JTextField searchField;
+    private ImageSelectionListener selectionListener;
+    private String selectedImageId;
+
+    public ImageLibraryPanel(ImageLibrary library) {
+        this.library = library;
+        this.thumbnailGrid = new JPanel();
+
+        setLayout(new BorderLayout(5, 5));
+        setBorder(BorderFactory.createTitledBorder("Image Library"));
+
+        // Top panel with controls
+        JPanel topPanel = new JPanel(new BorderLayout(5, 5));
+
+        // Search field
+        searchField = new JTextField();
+        searchField.addActionListener(e -> refreshThumbnails());
+        JPanel searchPanel = new JPanel(new BorderLayout(5, 5));
+        searchPanel.add(new JLabel("Search:"), BorderLayout.WEST);
+        searchPanel.add(searchField, BorderLayout.CENTER);
+        JButton searchBtn = new JButton("Go");
+        searchBtn.addActionListener(e -> refreshThumbnails());
+        searchPanel.add(searchBtn, BorderLayout.EAST);
+
+        // Category filter
+        categoryFilter = new JComboBox<>();
+        categoryFilter.addActionListener(e -> refreshThumbnails());
+        JPanel categoryPanel = new JPanel(new BorderLayout(5, 5));
+        categoryPanel.add(new JLabel("Category:"), BorderLayout.WEST);
+        categoryPanel.add(categoryFilter, BorderLayout.CENTER);
+
+        // Combine search and category
+        JPanel filterPanel = new JPanel(new GridLayout(2, 1, 5, 5));
+        filterPanel.add(searchPanel);
+        filterPanel.add(categoryPanel);
+        topPanel.add(filterPanel, BorderLayout.CENTER);
+
+        // Button panel
+        JPanel buttonPanel = new JPanel(new GridLayout(1, 3, 5, 5));
+        JButton addButton = new JButton("Add Image");
+        addButton.addActionListener(e -> addImage());
+        JButton editButton = new JButton("Edit");
+        editButton.addActionListener(e -> editSelectedImage());
+        JButton deleteButton = new JButton("Delete");
+        deleteButton.addActionListener(e -> deleteSelectedImage());
+
+        buttonPanel.add(addButton);
+        buttonPanel.add(editButton);
+        buttonPanel.add(deleteButton);
+        topPanel.add(buttonPanel, BorderLayout.SOUTH);
+
+        add(topPanel, BorderLayout.NORTH);
+
+        // Thumbnail grid with scroll pane
+        thumbnailGrid.setLayout(new GridLayout(0, 2, 5, 5));
+        thumbnailGrid.setBackground(new Color(50, 50, 50));
+        JScrollPane scrollPane = new JScrollPane(thumbnailGrid);
+        scrollPane.setPreferredSize(new Dimension(340, 400));
+        scrollPane.getVerticalScrollBar().setUnitIncrement(16);
+        add(scrollPane, BorderLayout.CENTER);
+
+        // Initialize
+        refreshCategories();
+        refreshThumbnails();
+    }
+
+    /**
+     * Refresh the category dropdown.
+     */
+    private void refreshCategories() {
+        String selected = (String) categoryFilter.getSelectedItem();
+        categoryFilter.removeAllItems();
+        categoryFilter.addItem("All Categories");
+
+        Set<String> categories = library.getAllCategories();
+        List<String> sortedCategories = new ArrayList<>(categories);
+        Collections.sort(sortedCategories);
+
+        for (String category : sortedCategories) {
+            categoryFilter.addItem(category);
+        }
+
+        if (selected != null && categories.contains(selected)) {
+            categoryFilter.setSelectedItem(selected);
+        }
+    }
+
+    /**
+     * Refresh the thumbnail display.
+     */
+    public void refreshThumbnails() {
+        thumbnailGrid.removeAll();
+
+        // Get filtered image IDs
+        List<String> imageIds = getFilteredImageIds();
+
+        // Sort by display name
+        imageIds.sort((id1, id2) -> {
+            ImageMetadata m1 = library.getMetadata(id1);
+            ImageMetadata m2 = library.getMetadata(id2);
+            return m1.getDisplayName().compareToIgnoreCase(m2.getDisplayName());
+        });
+
+        // Create thumbnail panels
+        for (String id : imageIds) {
+            ImageMetadata meta = library.getMetadata(id);
+            if (meta != null) {
+                ThumbnailPanel thumbPanel = new ThumbnailPanel(id, meta);
+                thumbnailGrid.add(thumbPanel);
+            }
+        }
+
+        thumbnailGrid.revalidate();
+        thumbnailGrid.repaint();
+    }
+
+    /**
+     * Get image IDs based on current filter settings.
+     */
+    private List<String> getFilteredImageIds() {
+        String category = (String) categoryFilter.getSelectedItem();
+        String searchQuery = searchField.getText().trim();
+
+        List<String> imageIds;
+
+        // Filter by category
+        if (category == null || category.equals("All Categories")) {
+            imageIds = library.getAllImageIds();
+        } else {
+            imageIds = library.getImageIdsByCategory(category);
+        }
+
+        // Filter by search query
+        if (!searchQuery.isEmpty()) {
+            List<String> searchResults = library.searchImages(searchQuery);
+            imageIds.retainAll(searchResults);
+        }
+
+        return imageIds;
+    }
+
+    /**
+     * Add a new image to the library.
+     */
+    private void addImage() {
+        JFileChooser fileChooser = new JFileChooser();
+        fileChooser.setFileFilter(new javax.swing.filechooser.FileFilter() {
+            @Override
+            public boolean accept(File f) {
+                if (f.isDirectory()) return true;
+                String name = f.getName().toLowerCase();
+                return name.endsWith(".jpg") || name.endsWith(".jpeg") ||
+                       name.endsWith(".png") || name.endsWith(".gif") ||
+                       name.endsWith(".bmp");
+            }
+
+            @Override
+            public String getDescription() {
+                return "Image files (*.jpg, *.png, *.gif, *.bmp)";
+            }
+        });
+
+        int result = fileChooser.showOpenDialog(this);
+        if (result == JFileChooser.APPROVE_OPTION) {
+            try {
+                File selectedFile = fileChooser.getSelectedFile();
+                ImageMetadata meta = library.addImage(selectedFile);
+
+                // Show edit dialog for the new image
+                showEditDialog(meta);
+
+                refreshCategories();
+                refreshThumbnails();
+
+                JOptionPane.showMessageDialog(this,
+                        "Image added successfully!",
+                        "Success",
+                        JOptionPane.INFORMATION_MESSAGE);
+            } catch (IOException ex) {
+                JOptionPane.showMessageDialog(this,
+                        "Error adding image: " + ex.getMessage(),
+                        "Error",
+                        JOptionPane.ERROR_MESSAGE);
+            }
+        }
+    }
+
+    /**
+     * Edit the selected image metadata.
+     */
+    private void editSelectedImage() {
+        if (selectedImageId == null) {
+            JOptionPane.showMessageDialog(this,
+                    "Please select an image first.",
+                    "No Selection",
+                    JOptionPane.WARNING_MESSAGE);
+            return;
+        }
+
+        ImageMetadata meta = library.getMetadata(selectedImageId);
+        if (meta != null) {
+            showEditDialog(meta);
+            refreshCategories();
+            refreshThumbnails();
+        }
+    }
+
+    /**
+     * Show the edit dialog for image metadata.
+     */
+    private void showEditDialog(ImageMetadata meta) {
+        JDialog dialog = new JDialog((Frame) SwingUtilities.getWindowAncestor(this), "Edit Image", true);
+        dialog.setLayout(new BorderLayout(10, 10));
+
+        JPanel formPanel = new JPanel(new GridLayout(4, 2, 5, 5));
+        formPanel.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
+
+        // Display name
+        formPanel.add(new JLabel("Name:"));
+        JTextField nameField = new JTextField(meta.getDisplayName());
+        formPanel.add(nameField);
+
+        // Category
+        formPanel.add(new JLabel("Category:"));
+        JComboBox<String> categoryCombo = new JComboBox<>();
+        for (String cat : library.getAllCategories()) {
+            categoryCombo.addItem(cat);
+        }
+        categoryCombo.setEditable(true);
+        categoryCombo.setSelectedItem(meta.getCategory());
+        formPanel.add(categoryCombo);
+
+        // Tags
+        formPanel.add(new JLabel("Tags (comma-separated):"));
+        JTextField tagsField = new JTextField(String.join(", ", meta.getTags()));
+        formPanel.add(tagsField);
+
+        // Notes
+        formPanel.add(new JLabel("Notes:"));
+        JTextField notesField = new JTextField(meta.getNotes());
+        formPanel.add(notesField);
+
+        dialog.add(formPanel, BorderLayout.CENTER);
+
+        // Buttons
+        JPanel buttonPanel = new JPanel();
+        JButton saveButton = new JButton("Save");
+        JButton cancelButton = new JButton("Cancel");
+
+        saveButton.addActionListener(e -> {
+            meta.setDisplayName(nameField.getText().trim());
+            meta.setCategory((String) categoryCombo.getSelectedItem());
+            meta.setNotes(notesField.getText().trim());
+
+            // Parse tags
+            String[] tagArray = tagsField.getText().split(",");
+            Set<String> tags = new HashSet<>();
+            for (String tag : tagArray) {
+                String trimmed = tag.trim();
+                if (!trimmed.isEmpty()) {
+                    tags.add(trimmed);
+                }
+            }
+            meta.setTags(tags);
+
+            library.updateMetadata(meta.getId(), meta);
+            dialog.dispose();
+        });
+
+        cancelButton.addActionListener(e -> dialog.dispose());
+
+        buttonPanel.add(saveButton);
+        buttonPanel.add(cancelButton);
+        dialog.add(buttonPanel, BorderLayout.SOUTH);
+
+        dialog.pack();
+        dialog.setLocationRelativeTo(this);
+        dialog.setVisible(true);
+    }
+
+    /**
+     * Delete the selected image.
+     */
+    private void deleteSelectedImage() {
+        if (selectedImageId == null) {
+            JOptionPane.showMessageDialog(this,
+                    "Please select an image first.",
+                    "No Selection",
+                    JOptionPane.WARNING_MESSAGE);
+            return;
+        }
+
+        ImageMetadata meta = library.getMetadata(selectedImageId);
+        if (meta == null) {
+            return;
+        }
+
+        int result = JOptionPane.showConfirmDialog(this,
+                "Are you sure you want to delete '" + meta.getDisplayName() + "'?",
+                "Confirm Delete",
+                JOptionPane.YES_NO_OPTION,
+                JOptionPane.WARNING_MESSAGE);
+
+        if (result == JOptionPane.YES_OPTION) {
+            library.deleteImage(selectedImageId);
+            selectedImageId = null;
+            refreshCategories();
+            refreshThumbnails();
+        }
+    }
+
+    /**
+     * Set the selection listener.
+     */
+    public void setSelectionListener(ImageSelectionListener listener) {
+        this.selectionListener = listener;
+    }
+
+    /**
+     * Interface for image selection events.
+     */
+    public interface ImageSelectionListener {
+        void onImageSelected(String imageId, BufferedImage image);
+    }
+
+    /**
+     * Panel representing a single thumbnail.
+     */
+    private class ThumbnailPanel extends JPanel {
+        private final String imageId;
+        private final ImageMetadata metadata;
+        private boolean isSelected = false;
+
+        public ThumbnailPanel(String imageId, ImageMetadata metadata) {
+            this.imageId = imageId;
+            this.metadata = metadata;
+
+            setLayout(new BorderLayout());
+            setBackground(new Color(60, 60, 60));
+            setBorder(BorderFactory.createLineBorder(new Color(80, 80, 80), 2));
+            setPreferredSize(new Dimension(160, 180));
+
+            // Thumbnail image
+            BufferedImage thumbnail = library.getThumbnail(imageId);
+            JLabel imageLabel = new JLabel();
+            if (thumbnail != null) {
+                imageLabel.setIcon(new ImageIcon(thumbnail));
+            }
+            imageLabel.setHorizontalAlignment(JLabel.CENTER);
+            add(imageLabel, BorderLayout.CENTER);
+
+            // Name label
+            JLabel nameLabel = new JLabel(metadata.getDisplayName(), JLabel.CENTER);
+            nameLabel.setForeground(Color.WHITE);
+            nameLabel.setFont(nameLabel.getFont().deriveFont(11f));
+            add(nameLabel, BorderLayout.SOUTH);
+
+            // Mouse listener for selection
+            addMouseListener(new MouseAdapter() {
+                @Override
+                public void mouseClicked(MouseEvent e) {
+                    if (e.getClickCount() == 2) {
+                        // Double-click to select and load image
+                        loadAndSelectImage();
+                    } else {
+                        // Single click to select
+                        setSelected(true);
+                    }
+                }
+
+                @Override
+                public void mouseEntered(MouseEvent e) {
+                    if (!isSelected) {
+                        setBorder(BorderFactory.createLineBorder(new Color(120, 120, 120), 2));
+                    }
+                }
+
+                @Override
+                public void mouseExited(MouseEvent e) {
+                    if (!isSelected) {
+                        setBorder(BorderFactory.createLineBorder(new Color(80, 80, 80), 2));
+                    }
+                }
+            });
+
+            // Show tooltip with metadata
+            setToolTipText(buildTooltip());
+        }
+
+        private void setSelected(boolean selected) {
+            // Deselect other thumbnails
+            if (selected) {
+                for (Component comp : thumbnailGrid.getComponents()) {
+                    if (comp instanceof ThumbnailPanel) {
+                        ((ThumbnailPanel) comp).isSelected = false;
+                        ((ThumbnailPanel) comp).updateBorder();
+                    }
+                }
+                selectedImageId = imageId;
+            }
+
+            isSelected = selected;
+            updateBorder();
+        }
+
+        private void updateBorder() {
+            if (isSelected) {
+                setBorder(BorderFactory.createLineBorder(new Color(100, 150, 255), 3));
+            } else {
+                setBorder(BorderFactory.createLineBorder(new Color(80, 80, 80), 2));
+            }
+        }
+
+        private void loadAndSelectImage() {
+            try {
+                BufferedImage image = library.loadImage(imageId);
+                if (selectionListener != null) {
+                    selectionListener.onImageSelected(imageId, image);
+                }
+                setSelected(true);
+            } catch (IOException ex) {
+                JOptionPane.showMessageDialog(ImageLibraryPanel.this,
+                        "Error loading image: " + ex.getMessage(),
+                        "Error",
+                        JOptionPane.ERROR_MESSAGE);
+            }
+        }
+
+        private String buildTooltip() {
+            StringBuilder sb = new StringBuilder("<html>");
+            sb.append("<b>").append(metadata.getDisplayName()).append("</b><br>");
+            sb.append("Category: ").append(metadata.getCategory()).append("<br>");
+
+            if (!metadata.getTags().isEmpty()) {
+                sb.append("Tags: ").append(String.join(", ", metadata.getTags())).append("<br>");
+            }
+
+            if (!metadata.getNotes().isEmpty()) {
+                sb.append("Notes: ").append(metadata.getNotes()).append("<br>");
+            }
+
+            sb.append("</html>");
+            return sb.toString();
+        }
+    }
+}
