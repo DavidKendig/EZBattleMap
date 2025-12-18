@@ -126,6 +126,6 @@ EZBattleMap lets you control exactly what portions of your battlemap your player
 
 ## License
 
-MIT License - Copyright (c) 2024 David Kendig
+MIT License - Copyright (c) 2025 David Kendig
 
 See [LICENSE](LICENSE) file for details.
