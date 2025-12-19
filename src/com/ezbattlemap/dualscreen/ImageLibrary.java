@@ -13,13 +13,15 @@ import java.util.List;
  */
 public class ImageLibrary {
     private static final String LIBRARY_DIR_NAME = ".ezbattlemap";
-    private static final String IMAGES_DIR_NAME = "images";
+    private static final String MAPS_DIR_NAME = "maps";
+    private static final String TOKENS_DIR_NAME = "tokens";
     private static final String METADATA_FILE_NAME = "library.dat";
     private static final String THUMBNAILS_DIR_NAME = "thumbnails";
     private static final int THUMBNAIL_SIZE = 150;
 
     private final File libraryRoot;
-    private final File imagesDir;
+    private final File mapsDir;
+    private final File tokensDir;
     private final File thumbnailsDir;
     private final File metadataFile;
     private final Map<String, ImageMetadata> metadata;
@@ -29,7 +31,8 @@ public class ImageLibrary {
         // Set up directory structure in user home
         String userHome = System.getProperty("user.home");
         this.libraryRoot = new File(userHome, LIBRARY_DIR_NAME);
-        this.imagesDir = new File(libraryRoot, IMAGES_DIR_NAME);
+        this.mapsDir = new File(libraryRoot, MAPS_DIR_NAME);
+        this.tokensDir = new File(libraryRoot, TOKENS_DIR_NAME);
         this.thumbnailsDir = new File(libraryRoot, THUMBNAILS_DIR_NAME);
         this.metadataFile = new File(libraryRoot, METADATA_FILE_NAME);
         this.metadata = new HashMap<>();
@@ -46,8 +49,11 @@ public class ImageLibrary {
         if (!libraryRoot.exists()) {
             libraryRoot.mkdirs();
         }
-        if (!imagesDir.exists()) {
-            imagesDir.mkdirs();
+        if (!mapsDir.exists()) {
+            mapsDir.mkdirs();
+        }
+        if (!tokensDir.exists()) {
+            tokensDir.mkdirs();
         }
         if (!thumbnailsDir.exists()) {
             thumbnailsDir.mkdirs();
@@ -85,19 +91,22 @@ public class ImageLibrary {
     /**
      * Add an image to the library by copying it from the source file.
      */
-    public ImageMetadata addImage(File sourceFile) throws IOException {
+    public ImageMetadata addImage(File sourceFile, ImageMetadata.LibraryType libraryType) throws IOException {
         // Generate unique ID
         String baseName = getBaseName(sourceFile.getName());
         String extension = getExtension(sourceFile.getName());
         String id = generateUniqueId(baseName);
 
+        // Determine target directory
+        File targetDir = (libraryType == ImageMetadata.LibraryType.TOKEN) ? tokensDir : mapsDir;
+
         // Copy file to library
         String fileName = id + "." + extension;
-        File destFile = new File(imagesDir, fileName);
+        File destFile = new File(targetDir, fileName);
         Files.copy(sourceFile.toPath(), destFile.toPath(), StandardCopyOption.REPLACE_EXISTING);
 
         // Create metadata
-        ImageMetadata meta = new ImageMetadata(id, fileName);
+        ImageMetadata meta = new ImageMetadata(id, fileName, libraryType);
         meta.setDisplayName(baseName);
         metadata.put(id, meta);
 
@@ -108,6 +117,20 @@ public class ImageLibrary {
         saveMetadata();
 
         return meta;
+    }
+
+    /**
+     * Add an image to the library (backward compatibility - defaults to MAP).
+     */
+    public ImageMetadata addImage(File sourceFile) throws IOException {
+        return addImage(sourceFile, ImageMetadata.LibraryType.MAP);
+    }
+
+    /**
+     * Get the directory for a specific library type.
+     */
+    private File getDirectoryForType(ImageMetadata.LibraryType type) {
+        return (type == ImageMetadata.LibraryType.TOKEN) ? tokensDir : mapsDir;
     }
 
     /**
@@ -203,7 +226,8 @@ public class ImageLibrary {
             throw new IOException("Image not found: " + id);
         }
 
-        File imageFile = new File(imagesDir, meta.getFileName());
+        File imageDir = getDirectoryForType(meta.getLibraryType());
+        File imageFile = new File(imageDir, meta.getFileName());
         if (!imageFile.exists()) {
             throw new IOException("Image file not found: " + imageFile.getAbsolutePath());
         }
@@ -221,7 +245,8 @@ public class ImageLibrary {
         }
 
         // Delete image file
-        File imageFile = new File(imagesDir, meta.getFileName());
+        File imageDir = getDirectoryForType(meta.getLibraryType());
+        File imageFile = new File(imageDir, meta.getFileName());
         if (imageFile.exists()) {
             imageFile.delete();
         }
@@ -262,6 +287,19 @@ public class ImageLibrary {
     }
 
     /**
+     * Get all image IDs for a specific library type.
+     */
+    public List<String> getImageIdsByType(ImageMetadata.LibraryType type) {
+        List<String> result = new ArrayList<>();
+        for (Map.Entry<String, ImageMetadata> entry : metadata.entrySet()) {
+            if (entry.getValue().getLibraryType() == type) {
+                result.add(entry.getKey());
+            }
+        }
+        return result;
+    }
+
+    /**
      * Get all image IDs in a specific category.
      */
     public List<String> getImageIdsByCategory(String category) {
@@ -275,12 +313,39 @@ public class ImageLibrary {
     }
 
     /**
+     * Get all image IDs in a specific category and library type.
+     */
+    public List<String> getImageIdsByCategoryAndType(String category, ImageMetadata.LibraryType type) {
+        List<String> result = new ArrayList<>();
+        for (Map.Entry<String, ImageMetadata> entry : metadata.entrySet()) {
+            ImageMetadata meta = entry.getValue();
+            if (meta.getCategory().equals(category) && meta.getLibraryType() == type) {
+                result.add(entry.getKey());
+            }
+        }
+        return result;
+    }
+
+    /**
      * Get all categories.
      */
     public Set<String> getAllCategories() {
         Set<String> categories = new HashSet<>();
         for (ImageMetadata meta : metadata.values()) {
             categories.add(meta.getCategory());
+        }
+        return categories;
+    }
+
+    /**
+     * Get all categories for a specific library type.
+     */
+    public Set<String> getCategoriesByType(ImageMetadata.LibraryType type) {
+        Set<String> categories = new HashSet<>();
+        for (ImageMetadata meta : metadata.values()) {
+            if (meta.getLibraryType() == type) {
+                categories.add(meta.getCategory());
+            }
         }
         return categories;
     }

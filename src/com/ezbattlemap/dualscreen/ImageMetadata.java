@@ -7,7 +7,11 @@ import java.util.*;
  * Stores metadata information for library images including name, category, tags, and notes.
  */
 public class ImageMetadata implements Serializable {
-    private static final long serialVersionUID = 1L;
+    private static final long serialVersionUID = 2L;
+
+    public enum LibraryType {
+        MAP, TOKEN
+    }
 
     private String id;              // Unique identifier (filename without extension)
     private String displayName;     // User-friendly name
@@ -17,16 +21,23 @@ public class ImageMetadata implements Serializable {
     private String fileName;        // Actual file name on disk
     private long dateAdded;         // Timestamp when added
     private long lastModified;      // Last modification timestamp
+    private LibraryType libraryType; // MAP or TOKEN
 
-    public ImageMetadata(String id, String fileName) {
+    public ImageMetadata(String id, String fileName, LibraryType libraryType) {
         this.id = id;
         this.fileName = fileName;
+        this.libraryType = libraryType;
         this.displayName = id;
         this.category = "Uncategorized";
         this.tags = new HashSet<>();
         this.notes = "";
         this.dateAdded = System.currentTimeMillis();
         this.lastModified = this.dateAdded;
+    }
+
+    // Backward compatibility constructor
+    public ImageMetadata(String id, String fileName) {
+        this(id, fileName, LibraryType.MAP);
     }
 
     // Getters
@@ -38,6 +49,7 @@ public class ImageMetadata implements Serializable {
     public String getFileName() { return fileName; }
     public long getDateAdded() { return dateAdded; }
     public long getLastModified() { return lastModified; }
+    public LibraryType getLibraryType() { return libraryType; }
 
     // Setters
     public void setDisplayName(String displayName) {

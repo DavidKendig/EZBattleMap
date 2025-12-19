@@ -1,0 +1,30 @@
+# Claude Code configuration
+.claude/
+
+# Compiled Java class files
+bin/
+
+# IDE specific files
+.vscode/
+.idea/
+*.iml
+
+# OS specific files
+.DS_Store
+Thumbs.db
+
+# Java compiled files
+*.class
+
+# Package files
+*.jar
+*.war
+*.ear
+
+# Log files
+*.log
+
+# Temporary files
+*.tmp
+*.temp
+temp_files.txt

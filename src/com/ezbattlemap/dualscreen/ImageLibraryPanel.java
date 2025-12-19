@@ -16,18 +16,34 @@ public class ImageLibraryPanel extends JPanel {
     private final JPanel thumbnailGrid;
     private final JComboBox<String> categoryFilter;
     private final JTextField searchField;
+    private final JComboBox<String> libraryTypeSelector;
     private ImageSelectionListener selectionListener;
+    private TokenDragListener tokenDragListener;
     private String selectedImageId;
+    private ImageMetadata.LibraryType currentLibraryType;
 
     public ImageLibraryPanel(ImageLibrary library) {
         this.library = library;
         this.thumbnailGrid = new JPanel();
+        this.currentLibraryType = ImageMetadata.LibraryType.MAP;
 
         setLayout(new BorderLayout(5, 5));
         setBorder(BorderFactory.createTitledBorder("Image Library"));
 
         // Top panel with controls
         JPanel topPanel = new JPanel(new BorderLayout(5, 5));
+
+        // Library type selector (Maps vs Tokens)
+        libraryTypeSelector = new JComboBox<>(new String[]{"Maps", "Tokens"});
+        libraryTypeSelector.addActionListener(e -> {
+            currentLibraryType = libraryTypeSelector.getSelectedIndex() == 0 ?
+                ImageMetadata.LibraryType.MAP : ImageMetadata.LibraryType.TOKEN;
+            refreshCategories();
+            refreshThumbnails();
+        });
+        JPanel typePanel = new JPanel(new BorderLayout(5, 5));
+        typePanel.add(new JLabel("Library:"), BorderLayout.WEST);
+        typePanel.add(libraryTypeSelector, BorderLayout.CENTER);
 
         // Search field
         searchField = new JTextField();
@@ -46,8 +62,9 @@ public class ImageLibraryPanel extends JPanel {
         categoryPanel.add(new JLabel("Category:"), BorderLayout.WEST);
         categoryPanel.add(categoryFilter, BorderLayout.CENTER);
 
-        // Combine search and category
-        JPanel filterPanel = new JPanel(new GridLayout(2, 1, 5, 5));
+        // Combine all filters
+        JPanel filterPanel = new JPanel(new GridLayout(3, 1, 5, 5));
+        filterPanel.add(typePanel);
         filterPanel.add(searchPanel);
         filterPanel.add(categoryPanel);
         topPanel.add(filterPanel, BorderLayout.CENTER);
@@ -89,7 +106,7 @@ public class ImageLibraryPanel extends JPanel {
         categoryFilter.removeAllItems();
         categoryFilter.addItem("All Categories");
 
-        Set<String> categories = library.getAllCategories();
+        Set<String> categories = library.getCategoriesByType(currentLibraryType);
         List<String> sortedCategories = new ArrayList<>(categories);
         Collections.sort(sortedCategories);
 
@@ -140,11 +157,11 @@ public class ImageLibraryPanel extends JPanel {
 
         List<String> imageIds;
 
-        // Filter by category
+        // Filter by library type and category
         if (category == null || category.equals("All Categories")) {
-            imageIds = library.getAllImageIds();
+            imageIds = library.getImageIdsByType(currentLibraryType);
         } else {
-            imageIds = library.getImageIdsByCategory(category);
+            imageIds = library.getImageIdsByCategoryAndType(category, currentLibraryType);
         }
 
         // Filter by search query
@@ -181,7 +198,7 @@ public class ImageLibraryPanel extends JPanel {
         if (result == JFileChooser.APPROVE_OPTION) {
             try {
                 File selectedFile = fileChooser.getSelectedFile();
-                ImageMetadata meta = library.addImage(selectedFile);
+                ImageMetadata meta = library.addImage(selectedFile, currentLibraryType);
 
                 // Show edit dialog for the new image
                 showEditDialog(meta);
@@ -334,10 +351,25 @@ public class ImageLibraryPanel extends JPanel {
     }
 
     /**
+     * Set the token drag listener.
+     */
+    public void setTokenDragListener(TokenDragListener listener) {
+        this.tokenDragListener = listener;
+    }
+
+    /**
      * Interface for image selection events.
      */
     public interface ImageSelectionListener {
         void onImageSelected(String imageId, BufferedImage image);
+    }
+
+    /**
+     * Interface for token drag events.
+     */
+    public interface TokenDragListener {
+        void onTokenDragStart(String imageId, BufferedImage tokenImage);
+        void onTokenPlace(String imageId, BufferedImage tokenImage, int gridX, int gridY);
     }
 
     /**
@@ -372,16 +404,52 @@ public class ImageLibraryPanel extends JPanel {
             nameLabel.setFont(nameLabel.getFont().deriveFont(11f));
             add(nameLabel, BorderLayout.SOUTH);
 
-            // Mouse listener for selection
-            addMouseListener(new MouseAdapter() {
+            // Mouse listener for selection and drag
+            MouseAdapter mouseHandler = new MouseAdapter() {
+                private Point pressPoint;
+                private boolean isDragging = false;
+
+                @Override
+                public void mousePressed(MouseEvent e) {
+                    pressPoint = e.getPoint();
+                    isDragging = false;
+                    setSelected(true);
+                }
+
+                @Override
+                public void mouseDragged(MouseEvent e) {
+                    if (pressPoint != null && !isDragging) {
+                        int dx = (int) Math.abs(e.getX() - pressPoint.getX());
+                        int dy = (int) Math.abs(e.getY() - pressPoint.getY());
+
+                        // Start drag if moved more than 5 pixels
+                        if (dx > 5 || dy > 5) {
+                            isDragging = true;
+                            // Only tokens can be dragged
+                            if (metadata.getLibraryType() == ImageMetadata.LibraryType.TOKEN) {
+                                startTokenDrag();
+                            }
+                        }
+                    }
+                }
+
+                @Override
+                public void mouseReleased(MouseEvent e) {
+                    pressPoint = null;
+                    isDragging = false;
+                }
+
                 @Override
                 public void mouseClicked(MouseEvent e) {
-                    if (e.getClickCount() == 2) {
-                        // Double-click to select and load image
-                        loadAndSelectImage();
-                    } else {
-                        // Single click to select
-                        setSelected(true);
+                    if (e.getClickCount() == 2 && !isDragging) {
+                        // Double-click behavior depends on type
+                        if (metadata.getLibraryType() == ImageMetadata.LibraryType.MAP) {
+                            // Maps: load as background
+                            loadAndSelectImage();
+                        } else {
+                            // Tokens: place on map at center
+                            placeTokenAtCenter();
+                        }
                     }
                 }
 
@@ -398,7 +466,10 @@ public class ImageLibraryPanel extends JPanel {
                         setBorder(BorderFactory.createLineBorder(new Color(80, 80, 80), 2));
                     }
                 }
-            });
+            };
+
+            addMouseListener(mouseHandler);
+            addMouseMotionListener(mouseHandler);
 
             // Show tooltip with metadata
             setToolTipText(buildTooltip());
@@ -440,6 +511,42 @@ public class ImageLibraryPanel extends JPanel {
                         "Error loading image: " + ex.getMessage(),
                         "Error",
                         JOptionPane.ERROR_MESSAGE);
+            }
+        }
+
+        private void startTokenDrag() {
+            // Change cursor to indicate dragging
+            setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+
+            // Notify listener that drag has started
+            if (tokenDragListener != null) {
+                try {
+                    BufferedImage tokenImage = library.loadImage(imageId);
+                    tokenDragListener.onTokenDragStart(imageId, tokenImage);
+                } catch (IOException ex) {
+                    JOptionPane.showMessageDialog(ImageLibraryPanel.this,
+                            "Error loading token image: " + ex.getMessage(),
+                            "Error",
+                            JOptionPane.ERROR_MESSAGE);
+                }
+            }
+
+            // Reset cursor when drag ends
+            setCursor(Cursor.getDefaultCursor());
+        }
+
+        private void placeTokenAtCenter() {
+            // Double-click on token places it at center of map
+            if (tokenDragListener != null) {
+                try {
+                    BufferedImage tokenImage = library.loadImage(imageId);
+                    tokenDragListener.onTokenDragStart(imageId, tokenImage);
+                } catch (IOException ex) {
+                    JOptionPane.showMessageDialog(ImageLibraryPanel.this,
+                            "Error loading token image: " + ex.getMessage(),
+                            "Error",
+                            JOptionPane.ERROR_MESSAGE);
+                }
             }
         }
 

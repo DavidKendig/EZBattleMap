@@ -74,19 +74,21 @@ EZBattleMap lets you control exactly what portions of your battlemap your player
    - Place the Player Display on your second monitor/TV for players to see
    - Keep the GM Controller on your screen
 
-2. **Manage your map library** (left panel on GM Controller):
-   - **Add Images**: Click "Add Image" to upload battlemaps to your library
-     - Images are copied to `~/.ezbattlemap/images/` (safe permanent storage)
+2. **Manage your libraries** (left panel on GM Controller):
+   - **Switch Libraries**: Use the "Library" dropdown to switch between Maps and Tokens
+   - **Add Images**: Click "Add Image" to upload images to the current library
+     - Maps are stored in `~/.ezbattlemap/maps/`
+     - Tokens are stored in `~/.ezbattlemap/tokens/`
      - Thumbnails are automatically generated for easy browsing
    - **Organize**: Click "Edit" to set:
-     - Display name (e.g., "Tavern Level 1")
-     - Category (e.g., "Dungeons", "Cities", "Wilderness")
-     - Tags (e.g., "indoor", "combat", "level-5")
-     - Notes (e.g., "Use for Chapter 3 encounter")
-   - **Search**: Use the search bar to find maps by any metadata
-   - **Filter**: Select a category from the dropdown to show only those maps
-   - **Load**: Double-click any thumbnail to load it onto the battlemap
-   - **Delete**: Select a map and click "Delete" to remove it from your library
+     - Display name (e.g., "Tavern Level 1" or "Goblin Warrior")
+     - Category (e.g., "Dungeons", "Characters", "Monsters")
+     - Tags (e.g., "indoor", "combat", "level-5", "player-character")
+     - Notes (e.g., "Use for Chapter 3 encounter" or "HP: 15, AC: 13")
+   - **Search**: Use the search bar to find images by any metadata
+   - **Filter**: Select a category from the dropdown to show only those in the current library
+   - **Load Maps**: Double-click a map thumbnail to load it onto the battlemap
+   - **Delete**: Select an image and click "Delete" to remove it from your library
 
 3. **Load your battlemap**:
    - Double-click a thumbnail from your library, OR
@@ -158,25 +160,33 @@ EZBattleMap lets you control exactly what portions of your battlemap your player
 
 ## Image Library Storage
 
-Your battlemap library is stored permanently in your user home directory:
+Your battlemap and token libraries are stored permanently in your user home directory:
 
 **Location**: `~/.ezbattlemap/` (or `C:\Users\YourName\.ezbattlemap\` on Windows)
 
 **Directory Structure**:
 ```
 ~/.ezbattlemap/
-├── images/           # Full-size battlemap images
-├── thumbnails/       # Auto-generated 150x150px thumbnails
-└── library.dat       # Metadata (names, categories, tags, notes)
+├── maps/             # Full-size battlemap images
+├── tokens/           # Token/character images
+├── thumbnails/       # Auto-generated 150x150px thumbnails (shared)
+└── library.dat       # Metadata for both libraries (names, categories, tags, notes)
 ```
 
+**Library Types**:
+- **Maps Library**: Store your battlemaps, dungeon tiles, and scene backgrounds
+- **Tokens Library**: Store character tokens, monster tokens, and markers
+- Switch between libraries using the "Library" dropdown in the left panel
+- Each library has independent categories and organization
+
 **Important Notes**:
-- Images are automatically copied to the library when you click "Add Image"
+- Images are automatically copied to the appropriate library folder when you click "Add Image"
 - Original files are not modified or moved
 - Deleting from library removes images from `.ezbattlemap/` only
 - To backup your library, copy the entire `.ezbattlemap/` folder
 - To share your library across computers, copy `.ezbattlemap/` to the new machine
 - Library persists between sessions and program updates
+- Maps and tokens can have the same filenames (stored in separate directories)
 
 ## License
 

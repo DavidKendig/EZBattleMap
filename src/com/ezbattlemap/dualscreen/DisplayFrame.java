@@ -4,6 +4,7 @@ import javax.swing.*;
 import java.awt.*;
 import java.awt.event.*;
 import java.awt.image.BufferedImage;
+import java.io.IOException;
 import java.util.List;
 
 /**
@@ -15,6 +16,7 @@ public class DisplayFrame extends JFrame {
     private BufferedImage currentImage;
     private Rectangle viewport;
     private GridOverlay gridOverlay;
+    private TokenOverlay tokenOverlay;
 
     public DisplayFrame(DualScreenImageApp app) {
         this.app = app;
@@ -34,6 +36,10 @@ public class DisplayFrame extends JFrame {
         add(statusPanel, BorderLayout.SOUTH);
     }
 
+    public void setImageLibrary(ImageLibrary library) {
+        displayPanel.setImageLibrary(library);
+    }
+
     public void setImage(BufferedImage image) {
         this.currentImage = image;
         displayPanel.setFullImage(image);
@@ -43,6 +49,12 @@ public class DisplayFrame extends JFrame {
     public void updateGridOverlay(GridOverlay gridOverlay) {
         this.gridOverlay = gridOverlay;
         displayPanel.setGridOverlay(gridOverlay);
+        updateDisplay();
+    }
+
+    public void updateTokenOverlay(TokenOverlay tokenOverlay) {
+        this.tokenOverlay = tokenOverlay;
+        displayPanel.setTokenOverlay(tokenOverlay);
         updateDisplay();
     }
 
@@ -77,12 +89,18 @@ class DisplayPanel extends JPanel {
     private BufferedImage viewportImage;
     private Rectangle viewportBounds;
     private GridOverlay gridOverlay;
+    private TokenOverlay tokenOverlay;
+    private ImageLibrary library;
     private double scale = 1.0;
     private Point offset = new Point(0, 0);
 
     public DisplayPanel() {
         setBackground(Color.BLACK);
         setupMouseControls();
+    }
+
+    public void setImageLibrary(ImageLibrary library) {
+        this.library = library;
     }
 
     private void setupMouseControls() {
@@ -147,6 +165,10 @@ class DisplayPanel extends JPanel {
         this.gridOverlay = gridOverlay;
     }
 
+    public void setTokenOverlay(TokenOverlay tokenOverlay) {
+        this.tokenOverlay = tokenOverlay;
+    }
+
     public void setViewportImage(BufferedImage image, Rectangle viewport) {
         this.viewportImage = image;
         this.viewportBounds = viewport;
@@ -162,6 +184,59 @@ class DisplayPanel extends JPanel {
         }
 
         repaint();
+    }
+
+    private void drawTokens(Graphics2D g2d) {
+        if (tokenOverlay == null || gridOverlay == null || library == null || viewportBounds == null) {
+            return;
+        }
+
+        int squareSize = gridOverlay.getSquareSize();
+
+        for (Token token : tokenOverlay.getAllTokens()) {
+            // Load token image if not cached
+            if (token.getCachedImage() == null) {
+                try {
+                    BufferedImage tokenImg = library.loadImage(token.getImageId());
+                    token.setCachedImage(tokenImg);
+                } catch (Exception e) {
+                    continue; // Skip if image can't be loaded
+                }
+            }
+
+            BufferedImage tokenImg = token.getCachedImage();
+            if (tokenImg == null) continue;
+
+            // Calculate token position and size in image coordinates
+            int tokenX = token.getGridX() * squareSize;
+            int tokenY = token.getGridY() * squareSize;
+            int tokenWidth = token.getGridWidth() * squareSize;
+            int tokenHeight = token.getGridHeight() * squareSize;
+
+            // Create rectangle for token bounds
+            Rectangle tokenBounds = new Rectangle(tokenX, tokenY, tokenWidth, tokenHeight);
+
+            // Check if token intersects with viewport
+            if (tokenBounds.intersects(viewportBounds)) {
+                // Convert to viewport-relative coordinates
+                int relX = tokenX - viewportBounds.x;
+                int relY = tokenY - viewportBounds.y;
+
+                // Apply scale and offset for display
+                int screenX = offset.x + (int) (relX * scale);
+                int screenY = offset.y + (int) (relY * scale);
+                int screenWidth = (int) (tokenWidth * scale);
+                int screenHeight = (int) (tokenHeight * scale);
+
+                // Draw token image
+                g2d.drawImage(tokenImg, screenX, screenY, screenWidth, screenHeight, null);
+
+                // Draw token border
+                g2d.setColor(new Color(255, 100, 100, 200));
+                g2d.setStroke(new BasicStroke(2));
+                g2d.drawRect(screenX, screenY, screenWidth, screenHeight);
+            }
+        }
     }
 
     @Override
@@ -201,6 +276,9 @@ class DisplayPanel extends JPanel {
                     g2d.fillRect(displayX, displayY, displayW, displayH);
                 }
             }
+
+            // Draw tokens on top of everything
+            drawTokens(g2d);
         } else if (fullImage != null) {
             g2d.setColor(Color.GRAY);
             g2d.setFont(new Font("Arial", Font.PLAIN, 24));

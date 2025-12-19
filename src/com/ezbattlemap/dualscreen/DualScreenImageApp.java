@@ -43,6 +43,7 @@ public class DualScreenImageApp {
         GraphicsDevice[] screens = ge.getScreenDevices();
 
         displayFrame = new DisplayFrame(this);
+        displayFrame.setImageLibrary(imageLibrary);
         controllerFrame = new ControllerFrame(this, displayFrame, imageLibrary);
 
         if (screens.length > 1) {
