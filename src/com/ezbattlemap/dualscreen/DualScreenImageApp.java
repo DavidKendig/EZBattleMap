@@ -59,8 +59,6 @@ public class DualScreenImageApp {
 
         controllerFrame.setVisible(true);
         displayFrame.setVisible(true);
-
-        promptForImage();
     }
 
     public void promptForImage() {

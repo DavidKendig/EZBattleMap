@@ -36,6 +36,9 @@ public class ControllerFrame extends JFrame {
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         setLayout(new BorderLayout());
 
+        // Create menu bar
+        setJMenuBar(createMenuBar());
+
         gridOverlay = new GridOverlay();
         tokenOverlay = new TokenOverlay();
         imagePanel = new ImagePanel(gridOverlay, tokenOverlay, library);
@@ -288,6 +291,171 @@ public class ControllerFrame extends JFrame {
         panel.add(clearSelectionButton);
 
         return panel;
+    }
+
+    private JMenuBar createMenuBar() {
+        JMenuBar menuBar = new JMenuBar();
+
+        // About button
+        JButton aboutButton = new JButton("About");
+        aboutButton.addActionListener(e -> showAboutDialog());
+        aboutButton.setFocusPainted(false);
+        aboutButton.setBorderPainted(false);
+        aboutButton.setContentAreaFilled(false);
+        aboutButton.setCursor(new Cursor(Cursor.HAND_CURSOR));
+        menuBar.add(aboutButton);
+
+        // Help button
+        JButton helpButton = new JButton("Help");
+        helpButton.addActionListener(e -> showHelpDialog());
+        helpButton.setFocusPainted(false);
+        helpButton.setBorderPainted(false);
+        helpButton.setContentAreaFilled(false);
+        helpButton.setCursor(new Cursor(Cursor.HAND_CURSOR));
+        menuBar.add(helpButton);
+
+        return menuBar;
+    }
+
+    private void showAboutDialog() {
+        JDialog aboutDialog = new JDialog(this, "About EZBattleMap", true);
+        aboutDialog.setLayout(new BorderLayout(10, 10));
+        aboutDialog.setSize(500, 250);
+        aboutDialog.setLocationRelativeTo(this);
+
+        JPanel contentPanel = new JPanel();
+        contentPanel.setLayout(new BoxLayout(contentPanel, BoxLayout.Y_AXIS));
+        contentPanel.setBorder(BorderFactory.createEmptyBorder(20, 20, 20, 20));
+
+        JLabel titleLabel = new JLabel("EZBattleMap");
+        titleLabel.setFont(new Font("Arial", Font.BOLD, 24));
+        titleLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
+
+        JLabel versionLabel = new JLabel("Version 1.0.0");
+        versionLabel.setFont(new Font("Arial", Font.PLAIN, 14));
+        versionLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
+
+        JLabel authorLabel = new JLabel("by David Kendig");
+        authorLabel.setFont(new Font("Arial", Font.PLAIN, 14));
+        authorLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
+
+        JLabel copyrightLabel = new JLabel("Copyright 2025");
+        copyrightLabel.setFont(new Font("Arial", Font.PLAIN, 12));
+        copyrightLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
+
+        JPanel licensePanel = new JPanel(new FlowLayout(FlowLayout.CENTER));
+        JLabel licenseText = new JLabel("Released under the ");
+        JLabel licenseLink = new JLabel("<html><a href=''>MIT License</a></html>");
+        licenseLink.setForeground(Color.BLUE);
+        licenseLink.setCursor(new Cursor(Cursor.HAND_CURSOR));
+        licenseLink.addMouseListener(new MouseAdapter() {
+            @Override
+            public void mouseClicked(MouseEvent e) {
+                try {
+                    Desktop desktop = Desktop.getDesktop();
+                    desktop.browse(new java.net.URI("https://opensource.org/licenses/MIT"));
+                } catch (Exception ex) {
+                    JOptionPane.showMessageDialog(aboutDialog,
+                        "Could not open browser. Please visit: https://opensource.org/licenses/MIT",
+                        "Error", JOptionPane.ERROR_MESSAGE);
+                }
+            }
+        });
+        licensePanel.add(licenseText);
+        licensePanel.add(licenseLink);
+
+        contentPanel.add(titleLabel);
+        contentPanel.add(Box.createVerticalStrut(10));
+        contentPanel.add(versionLabel);
+        contentPanel.add(Box.createVerticalStrut(5));
+        contentPanel.add(authorLabel);
+        contentPanel.add(Box.createVerticalStrut(5));
+        contentPanel.add(copyrightLabel);
+        contentPanel.add(Box.createVerticalStrut(10));
+        contentPanel.add(licensePanel);
+
+        JButton closeButton = new JButton("Close");
+        closeButton.addActionListener(e -> aboutDialog.dispose());
+        JPanel buttonPanel = new JPanel();
+        buttonPanel.add(closeButton);
+
+        aboutDialog.add(contentPanel, BorderLayout.CENTER);
+        aboutDialog.add(buttonPanel, BorderLayout.SOUTH);
+
+        aboutDialog.setVisible(true);
+    }
+
+    private void showHelpDialog() {
+        JDialog helpDialog = new JDialog(this, "EZBattleMap - Help", true);
+        helpDialog.setLayout(new BorderLayout());
+        helpDialog.setSize(700, 600);
+        helpDialog.setLocationRelativeTo(this);
+
+        JTextArea helpText = new JTextArea();
+        helpText.setEditable(false);
+        helpText.setMargin(new Insets(10, 10, 10, 10));
+        helpText.setFont(new Font("Monospaced", Font.PLAIN, 12));
+        helpText.setText(
+            "EZBattleMap - Implemented Controls\n" +
+            "=================================\n\n" +
+
+            "GENERAL CONTROLS:\n" +
+            "-----------------\n" +
+            "  Mode Selector:        Switch between 'Map Mode' and 'Token Mode'\n" +
+            "  Select Image:         Load a new image from file system\n" +
+            "  Square Size:          Adjust grid square size (1-2000 pixels)\n" +
+            "  Clear Selection:      Clear all selected grid cells\n\n" +
+
+            "MAP MODE:\n" +
+            "---------\n" +
+            "  Left Click:           Select/deselect grid cells\n" +
+            "  Click + Drag:         Select multiple grid cells\n" +
+            "  Ctrl + Left Drag:     Pan the image\n" +
+            "  Middle Mouse Drag:    Pan the image\n" +
+            "  Mouse Wheel:          Zoom in/out\n\n" +
+
+            "TOKEN MODE:\n" +
+            "-----------\n" +
+            "  Left Click Token:     Select a token\n" +
+            "  Drag Selected Token:  Move token to new grid position\n" +
+            "  Right Click Token:    Delete token (with confirmation)\n" +
+            "  Drag from Library:    Place new token on map\n" +
+            "  Click Empty Space:    Deselect current token\n\n" +
+
+            "IMAGE LIBRARY:\n" +
+            "--------------\n" +
+            "  Double-Click Map:     Load map image to display\n" +
+            "  Drag Token to Map:    Place token on the map\n" +
+            "  Add to Library:       Import images to your library\n" +
+            "  Organize:             Categorize and tag your images\n" +
+            "  Search:               Find images by name, category, or tags\n\n" +
+
+            "DISPLAY WINDOW:\n" +
+            "---------------\n" +
+            "  The display window shows selected viewport to players\n" +
+            "  Red border indicates the visible area for players\n" +
+            "  Tokens are displayed on both controller and display windows\n\n" +
+
+            "TIPS:\n" +
+            "-----\n" +
+            "  - Grid size is saved per map and restored when reopened\n" +
+            "  - Use Map Mode to reveal areas to players\n" +
+            "  - Use Token Mode to manage character/monster positions\n" +
+            "  - Organize your library with categories and tags for quick access\n"
+        );
+
+        JScrollPane scrollPane = new JScrollPane(helpText);
+        scrollPane.setVerticalScrollBarPolicy(JScrollPane.VERTICAL_SCROLLBAR_ALWAYS);
+
+        JButton closeButton = new JButton("Close");
+        closeButton.addActionListener(e -> helpDialog.dispose());
+        JPanel buttonPanel = new JPanel();
+        buttonPanel.add(closeButton);
+
+        helpDialog.add(scrollPane, BorderLayout.CENTER);
+        helpDialog.add(buttonPanel, BorderLayout.SOUTH);
+
+        helpDialog.setVisible(true);
     }
 
     public void setImage(BufferedImage image) {
