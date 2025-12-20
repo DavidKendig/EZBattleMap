@@ -320,6 +320,13 @@ public class ControllerFrame extends JFrame {
             }
         });
 
+        JButton displayAllButton = new JButton("Display All");
+        displayAllButton.addActionListener(e -> {
+            gridOverlay.selectAll();
+            imagePanel.repaint();
+            displayFrame.updateViewport(gridOverlay.getSelectedBounds());
+        });
+
         JButton clearSelectionButton = new JButton("Clear Selection");
         clearSelectionButton.addActionListener(e -> {
             gridOverlay.clearSelection();
@@ -335,6 +342,8 @@ public class ControllerFrame extends JFrame {
         panel.add(gridLabel);
         panel.add(gridSizeSpinner);
         panel.add(Box.createHorizontalStrut(20));
+        panel.add(displayAllButton);
+        panel.add(Box.createHorizontalStrut(10));
         panel.add(clearSelectionButton);
 
         return panel;
@@ -614,6 +623,7 @@ public class ControllerFrame extends JFrame {
             "  Select Image:         Load a new image from file system\n" +
             "  Square Size:          Adjust grid square size (1-2000 pixels)\n" +
             "                        Grid size is saved per map\n" +
+            "  Display All:          Reveal entire map to players instantly\n" +
             "  Clear Selection:      Clear all selected grid cells\n\n" +
 
             "MAP MODE:\n" +
@@ -669,6 +679,8 @@ public class ControllerFrame extends JFrame {
             "  - Grid size is saved per map and restored when reopened\n" +
             "  - Use Map Mode to reveal areas progressively during play\n" +
             "  - Use Token Mode to manage character/monster positions\n" +
+            "  - Display All useful for outdoor encounters or full map reveals\n" +
+            "  - Clear Selection great for dramatic scene transitions\n" +
             "  - Organize library with categories for quick access\n" +
             "  - Mass Import speeds up initial library setup\n" +
             "  - Token sizes (1x1, 2x2, 3x3) useful for different creature sizes\n"

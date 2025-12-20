@@ -138,6 +138,7 @@ The left panel contains your image library with full organization tools:
    - Red border = total visible area on player screen
 
 4. **Quick controls**:
+   - **Display All**: Reveal the entire map to players instantly (great for outdoor encounters)
    - **Clear Selection**: Hide everything from players (great for scene transitions)
 
 ### Working with Tokens (Token Mode)
@@ -207,6 +208,7 @@ Both GM Controller and Player Display support independent navigation:
 | Adjust Grid Size | Square Size spinner (1-2000 pixels) |
 | Reveal Single Area | Left-click on grid square |
 | Reveal Multiple Areas | Left-click + Drag across squares |
+| Reveal Entire Map | "Display All" button |
 | Hide All from Players | "Clear Selection" button |
 
 ### Token Mode Controls
@@ -247,6 +249,7 @@ Both GM Controller and Player Display support independent navigation:
 - **Red border on controller** shows exactly what players see on their screen
 - **Switch modes efficiently**: Use Map Mode for fog of war, Token Mode for character management
 - **Token sizing**: Use 1x1 for Medium creatures, 2x2 for Large, 3x3 for Huge
+- **Display All** is perfect for outdoor encounters, wilderness maps, or when you want players to see the full tactical layout
 - **Clear selection** between scenes for dramatic reveals
 - **Independent zoom**: Players can zoom in/out on their screen - great for examining token details
 - **Metadata is powerful**: Add notes to tokens (HP, AC, abilities) for quick reference during play

@@ -99,6 +99,14 @@ public class GridOverlay {
         }
     }
 
+    public void selectAll() {
+        for (int y = 0; y < gridRows; y++) {
+            for (int x = 0; x < gridCols; x++) {
+                selectedCells[y][x] = true;
+            }
+        }
+    }
+
     public Rectangle getSelectedBounds() {
         int minX = gridCols;
         int minY = gridRows;
