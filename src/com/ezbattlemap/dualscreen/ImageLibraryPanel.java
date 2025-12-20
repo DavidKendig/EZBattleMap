@@ -223,6 +223,27 @@ public class ImageLibraryPanel extends JPanel {
      * Mass import multiple images to the library.
      */
     public void massImportImages() {
+        massImportWithType(currentLibraryType);
+    }
+
+    /**
+     * Mass import multiple maps to the Maps library.
+     */
+    public void massImportMaps() {
+        massImportWithType(ImageMetadata.LibraryType.MAP);
+    }
+
+    /**
+     * Mass import multiple tokens to the Tokens library.
+     */
+    public void massImportTokens() {
+        massImportWithType(ImageMetadata.LibraryType.TOKEN);
+    }
+
+    /**
+     * Mass import helper method.
+     */
+    private void massImportWithType(ImageMetadata.LibraryType libraryType) {
         JFileChooser fileChooser = new JFileChooser();
         fileChooser.setMultiSelectionEnabled(true);
         fileChooser.setFileFilter(new javax.swing.filechooser.FileFilter() {
@@ -241,6 +262,7 @@ public class ImageLibraryPanel extends JPanel {
             }
         });
 
+        String libraryName = (libraryType == ImageMetadata.LibraryType.MAP) ? "Maps" : "Tokens";
         int result = fileChooser.showOpenDialog(this);
         if (result == JFileChooser.APPROVE_OPTION) {
             File[] selectedFiles = fileChooser.getSelectedFiles();
@@ -250,7 +272,7 @@ public class ImageLibraryPanel extends JPanel {
 
             for (File file : selectedFiles) {
                 try {
-                    library.addImage(file, currentLibraryType);
+                    library.addImage(file, libraryType);
                     successCount++;
                 } catch (IOException ex) {
                     failCount++;
@@ -262,15 +284,15 @@ public class ImageLibraryPanel extends JPanel {
             refreshThumbnails();
 
             // Show results
-            String message = String.format("Import complete!\n\nSuccessfully imported: %d\nFailed: %d",
-                    successCount, failCount);
+            String message = String.format("Import to %s library complete!\n\nSuccessfully imported: %d\nFailed: %d",
+                    libraryName, successCount, failCount);
             if (failCount > 0) {
                 message += "\n\nErrors:\n" + errors.toString();
             }
 
             JOptionPane.showMessageDialog(this,
                     message,
-                    "Mass Import Results",
+                    "Mass Import Results - " + libraryName,
                     failCount > 0 ? JOptionPane.WARNING_MESSAGE : JOptionPane.INFORMATION_MESSAGE);
         }
     }

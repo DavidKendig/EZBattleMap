@@ -11,3 +11,4 @@ if %ERRORLEVEL% EQU 0 (
 ) else (
     echo Compilation failed!
 )
+pause

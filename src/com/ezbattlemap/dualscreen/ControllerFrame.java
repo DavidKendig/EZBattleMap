@@ -343,18 +343,32 @@ public class ControllerFrame extends JFrame {
     private JMenuBar createMenuBar() {
         JMenuBar menuBar = new JMenuBar();
 
-        // Mass Import button
-        JButton massImportButton = new JButton("Mass Import");
-        massImportButton.addActionListener(e -> {
+        // Import menu
+        JMenu importMenu = new JMenu("Import");
+        JMenuItem massImportMaps = new JMenuItem("Mass Import Maps");
+        massImportMaps.addActionListener(e -> {
             if (libraryPanel != null) {
-                libraryPanel.massImportImages();
+                libraryPanel.massImportMaps();
             }
         });
-        massImportButton.setFocusPainted(false);
-        massImportButton.setBorderPainted(false);
-        massImportButton.setContentAreaFilled(false);
-        massImportButton.setCursor(new Cursor(Cursor.HAND_CURSOR));
-        menuBar.add(massImportButton);
+        JMenuItem massImportTokens = new JMenuItem("Mass Import Tokens");
+        massImportTokens.addActionListener(e -> {
+            if (libraryPanel != null) {
+                libraryPanel.massImportTokens();
+            }
+        });
+        importMenu.add(massImportMaps);
+        importMenu.add(massImportTokens);
+        menuBar.add(importMenu);
+
+        // Tools menu
+        JMenu toolsMenu = new JMenu("Tools");
+        JMenu diceRollersMenu = new JMenu("Dice Rollers");
+        JMenuItem dndPfRoller = new JMenuItem("DnD/PF");
+        dndPfRoller.addActionListener(e -> showDiceRollerWindow());
+        diceRollersMenu.add(dndPfRoller);
+        toolsMenu.add(diceRollersMenu);
+        menuBar.add(toolsMenu);
 
         // About button
         JButton aboutButton = new JButton("About");
@@ -443,6 +457,135 @@ public class ControllerFrame extends JFrame {
         aboutDialog.add(buttonPanel, BorderLayout.SOUTH);
 
         aboutDialog.setVisible(true);
+    }
+
+    private void showDiceRollerWindow() {
+        JDialog diceRoller = new JDialog(this, "DnD/PF Dice Roller", false);
+        diceRoller.setLayout(new BorderLayout(10, 10));
+        diceRoller.setSize(520, 700);
+        diceRoller.setLocationRelativeTo(this);
+
+        JPanel mainPanel = new JPanel();
+        mainPanel.setLayout(new BoxLayout(mainPanel, BoxLayout.Y_AXIS));
+        mainPanel.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
+
+        // Results area - create first so we can reference it
+        JTextArea resultsArea = new JTextArea(10, 40);
+        resultsArea.setEditable(false);
+        resultsArea.setFont(new Font("Monospaced", Font.PLAIN, 12));
+        resultsArea.setMargin(new Insets(5, 5, 5, 5));
+        JScrollPane resultsScroll = new JScrollPane(resultsArea);
+        resultsScroll.setBorder(BorderFactory.createTitledBorder("Results"));
+
+        // Standard dice section
+        JPanel standardDicePanel = new JPanel(new GridLayout(0, 1, 5, 5));
+        standardDicePanel.setBorder(BorderFactory.createTitledBorder("Standard Dice"));
+
+        int[] diceTypes = {2, 4, 6, 8, 10, 12, 20, 100};
+        for (int die : diceTypes) {
+            JPanel diceRowPanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
+
+            JLabel dieLabel = new JLabel("d" + die + ":");
+            dieLabel.setPreferredSize(new Dimension(50, 25));
+
+            JLabel countLabel = new JLabel("Count:");
+            JSpinner countSpinner = new JSpinner(new SpinnerNumberModel(1, 1, 100, 1));
+            countSpinner.setPreferredSize(new Dimension(60, 25));
+
+            JLabel modLabel = new JLabel("Modifier:");
+            JSpinner modSpinner = new JSpinner(new SpinnerNumberModel(0, -999, 999, 1));
+            modSpinner.setPreferredSize(new Dimension(60, 25));
+
+            JButton rollButton = new JButton("Roll");
+            rollButton.addActionListener(e -> {
+                int count = (Integer) countSpinner.getValue();
+                int modifier = (Integer) modSpinner.getValue();
+                rollDice(die, count, modifier, resultsArea);
+            });
+
+            diceRowPanel.add(dieLabel);
+            diceRowPanel.add(countLabel);
+            diceRowPanel.add(countSpinner);
+            diceRowPanel.add(modLabel);
+            diceRowPanel.add(modSpinner);
+            diceRowPanel.add(rollButton);
+
+            standardDicePanel.add(diceRowPanel);
+        }
+
+        // Advantage/Disadvantage section
+        JPanel advantagePanel = new JPanel(new FlowLayout(FlowLayout.CENTER, 10, 5));
+        advantagePanel.setBorder(BorderFactory.createTitledBorder("d20 with Advantage/Disadvantage"));
+
+        JButton advantageButton = new JButton("Roll with Advantage");
+        advantageButton.addActionListener(e -> rollAdvantage(true, resultsArea));
+        advantagePanel.add(advantageButton);
+
+        JButton disadvantageButton = new JButton("Roll with Disadvantage");
+        disadvantageButton.addActionListener(e -> rollAdvantage(false, resultsArea));
+        advantagePanel.add(disadvantageButton);
+
+        mainPanel.add(standardDicePanel);
+        mainPanel.add(advantagePanel);
+
+        diceRoller.add(mainPanel, BorderLayout.CENTER);
+        diceRoller.add(resultsScroll, BorderLayout.SOUTH);
+
+        diceRoller.setVisible(true);
+    }
+
+    private void rollDice(int sides, int count, int modifier, JTextArea resultsArea) {
+        java.util.Random random = new java.util.Random();
+
+        StringBuilder result = new StringBuilder();
+        result.append(String.format("Rolling %dd%d%+d:\n", count, sides, modifier));
+
+        int total = 0;
+        result.append("Rolls: ");
+
+        for (int i = 0; i < count; i++) {
+            int roll = random.nextInt(sides) + 1;
+            total += roll;
+            result.append(roll);
+            if (i < count - 1) {
+                result.append(", ");
+            }
+        }
+
+        int finalTotal = total + modifier;
+        result.append(String.format("\nTotal: %d", finalTotal));
+        if (modifier != 0) {
+            result.append(String.format(" (%d%+d)", total, modifier));
+        }
+        result.append("\n\n");
+
+        resultsArea.append(result.toString());
+        resultsArea.setCaretPosition(resultsArea.getDocument().getLength());
+    }
+
+    private void rollAdvantage(boolean isAdvantage, JTextArea resultsArea) {
+        java.util.Random random = new java.util.Random();
+
+        int roll1 = random.nextInt(20) + 1;
+        int roll2 = random.nextInt(20) + 1;
+
+        int result;
+        String type;
+        if (isAdvantage) {
+            result = Math.max(roll1, roll2);
+            type = "Advantage";
+        } else {
+            result = Math.min(roll1, roll2);
+            type = "Disadvantage";
+        }
+
+        StringBuilder output = new StringBuilder();
+        output.append(String.format("Rolling d20 with %s:\n", type));
+        output.append(String.format("Rolls: %d, %d\n", roll1, roll2));
+        output.append(String.format("Result: %d\n\n", result));
+
+        resultsArea.append(output.toString());
+        resultsArea.setCaretPosition(resultsArea.getDocument().getLength());
     }
 
     private void showHelpDialog() {
