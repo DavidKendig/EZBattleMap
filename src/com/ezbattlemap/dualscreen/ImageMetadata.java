@@ -22,6 +22,7 @@ public class ImageMetadata implements Serializable {
     private long dateAdded;         // Timestamp when added
     private long lastModified;      // Last modification timestamp
     private LibraryType libraryType; // MAP or TOKEN
+    private int pixelSize = 100;    // Grid square size in pixels (default 100)
 
     public ImageMetadata(String id, String fileName, LibraryType libraryType) {
         this.id = id;
@@ -50,6 +51,7 @@ public class ImageMetadata implements Serializable {
     public long getDateAdded() { return dateAdded; }
     public long getLastModified() { return lastModified; }
     public LibraryType getLibraryType() { return libraryType; }
+    public int getPixelSize() { return pixelSize; }
 
     // Setters
     public void setDisplayName(String displayName) {
@@ -82,6 +84,11 @@ public class ImageMetadata implements Serializable {
         for (String tag : tags) {
             this.tags.add(tag.toLowerCase().trim());
         }
+        this.lastModified = System.currentTimeMillis();
+    }
+
+    public void setPixelSize(int pixelSize) {
+        this.pixelSize = pixelSize;
         this.lastModified = System.currentTimeMillis();
     }
 

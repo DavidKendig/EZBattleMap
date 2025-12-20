@@ -24,6 +24,7 @@ public class ControllerFrame extends JFrame {
     private JComboBox<String> modeSelector;
     private boolean isTokenMode = false;
     private Token selectedToken = null;
+    private String currentImageId = null;
 
     public ControllerFrame(DualScreenImageApp app, DisplayFrame displayFrame, ImageLibrary library) {
         this.app = app;
@@ -45,8 +46,19 @@ public class ControllerFrame extends JFrame {
         // Create image library panel on the left
         libraryPanel = new ImageLibraryPanel(library);
         libraryPanel.setSelectionListener((imageId, image) -> {
+            currentImageId = imageId;
             setImage(image);
             displayFrame.setImage(image);
+
+            // Load saved pixel size from metadata
+            ImageMetadata metadata = library.getMetadata(imageId);
+            if (metadata != null) {
+                int savedPixelSize = metadata.getPixelSize();
+                gridSizeSpinner.setValue(savedPixelSize);
+                gridOverlay.setSquareSize(savedPixelSize);
+                imagePanel.repaint();
+                displayFrame.updateGridOverlay(gridOverlay);
+            }
         });
         libraryPanel.setTokenDragListener(new ImageLibraryPanel.TokenDragListener() {
             @Override
@@ -247,6 +259,15 @@ public class ControllerFrame extends JFrame {
             gridOverlay.setSquareSize(size);
             imagePanel.repaint();
             displayFrame.updateGridOverlay(gridOverlay);
+
+            // Save pixel size to metadata if an image is currently loaded from library
+            if (currentImageId != null) {
+                ImageMetadata metadata = library.getMetadata(currentImageId);
+                if (metadata != null) {
+                    metadata.setPixelSize(size);
+                    library.updateMetadata(currentImageId, metadata);
+                }
+            }
         });
 
         JButton clearSelectionButton = new JButton("Clear Selection");
