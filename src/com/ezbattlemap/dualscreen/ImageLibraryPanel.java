@@ -220,6 +220,62 @@ public class ImageLibraryPanel extends JPanel {
     }
 
     /**
+     * Mass import multiple images to the library.
+     */
+    public void massImportImages() {
+        JFileChooser fileChooser = new JFileChooser();
+        fileChooser.setMultiSelectionEnabled(true);
+        fileChooser.setFileFilter(new javax.swing.filechooser.FileFilter() {
+            @Override
+            public boolean accept(File f) {
+                if (f.isDirectory()) return true;
+                String name = f.getName().toLowerCase();
+                return name.endsWith(".jpg") || name.endsWith(".jpeg") ||
+                       name.endsWith(".png") || name.endsWith(".gif") ||
+                       name.endsWith(".bmp");
+            }
+
+            @Override
+            public String getDescription() {
+                return "Image files (*.jpg, *.png, *.gif, *.bmp)";
+            }
+        });
+
+        int result = fileChooser.showOpenDialog(this);
+        if (result == JFileChooser.APPROVE_OPTION) {
+            File[] selectedFiles = fileChooser.getSelectedFiles();
+            int successCount = 0;
+            int failCount = 0;
+            StringBuilder errors = new StringBuilder();
+
+            for (File file : selectedFiles) {
+                try {
+                    library.addImage(file, currentLibraryType);
+                    successCount++;
+                } catch (IOException ex) {
+                    failCount++;
+                    errors.append(file.getName()).append(": ").append(ex.getMessage()).append("\n");
+                }
+            }
+
+            refreshCategories();
+            refreshThumbnails();
+
+            // Show results
+            String message = String.format("Import complete!\n\nSuccessfully imported: %d\nFailed: %d",
+                    successCount, failCount);
+            if (failCount > 0) {
+                message += "\n\nErrors:\n" + errors.toString();
+            }
+
+            JOptionPane.showMessageDialog(this,
+                    message,
+                    "Mass Import Results",
+                    failCount > 0 ? JOptionPane.WARNING_MESSAGE : JOptionPane.INFORMATION_MESSAGE);
+        }
+    }
+
+    /**
      * Edit the selected image metadata.
      */
     private void editSelectedImage() {

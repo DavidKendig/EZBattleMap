@@ -192,7 +192,7 @@ public class ControllerFrame extends JFrame {
 
             @Override
             public void mouseClicked(MouseEvent e) {
-                // Right-click to delete token in token mode
+                // Right-click to show token context menu in token mode
                 if (SwingUtilities.isRightMouseButton(e) && ControllerFrame.this.isTokenMode) {
                     Point imagePoint = imagePanel.getImagePoint(e.getPoint());
                     if (imagePoint != null) {
@@ -204,22 +204,7 @@ public class ControllerFrame extends JFrame {
 
                             Token clickedToken = tokenOverlay.getTokenAtPosition(cellX, cellY);
                             if (clickedToken != null) {
-                                int result = JOptionPane.showConfirmDialog(
-                                    ControllerFrame.this,
-                                    "Remove this token from the map?",
-                                    "Remove Token",
-                                    JOptionPane.YES_NO_OPTION,
-                                    JOptionPane.QUESTION_MESSAGE
-                                );
-
-                                if (result == JOptionPane.YES_OPTION) {
-                                    tokenOverlay.removeToken(clickedToken.getId());
-                                    if (ControllerFrame.this.selectedToken == clickedToken) {
-                                        ControllerFrame.this.selectedToken = null;
-                                    }
-                                    imagePanel.repaint();
-                                    displayFrame.updateTokenOverlay(tokenOverlay);
-                                }
+                                showTokenContextMenu(clickedToken, e.getPoint());
                             }
                         }
                     }
@@ -229,6 +214,68 @@ public class ControllerFrame extends JFrame {
 
         imagePanel.addMouseListener(gridSelectionAdapter);
         imagePanel.addMouseMotionListener(gridSelectionAdapter);
+    }
+
+    private void showTokenContextMenu(Token token, Point location) {
+        JPopupMenu contextMenu = new JPopupMenu();
+
+        // Size submenu
+        JMenu sizeMenu = new JMenu("Change Size");
+
+        JMenuItem size1x1 = new JMenuItem("1x1 (Small)");
+        size1x1.addActionListener(e -> {
+            token.setGridWidth(1);
+            token.setGridHeight(1);
+            imagePanel.repaint();
+            displayFrame.updateTokenOverlay(tokenOverlay);
+        });
+        sizeMenu.add(size1x1);
+
+        JMenuItem size2x2 = new JMenuItem("2x2 (Medium)");
+        size2x2.addActionListener(e -> {
+            token.setGridWidth(2);
+            token.setGridHeight(2);
+            imagePanel.repaint();
+            displayFrame.updateTokenOverlay(tokenOverlay);
+        });
+        sizeMenu.add(size2x2);
+
+        JMenuItem size3x3 = new JMenuItem("3x3 (Large)");
+        size3x3.addActionListener(e -> {
+            token.setGridWidth(3);
+            token.setGridHeight(3);
+            imagePanel.repaint();
+            displayFrame.updateTokenOverlay(tokenOverlay);
+        });
+        sizeMenu.add(size3x3);
+
+        contextMenu.add(sizeMenu);
+        contextMenu.addSeparator();
+
+        // Delete option
+        JMenuItem deleteItem = new JMenuItem("Delete Token");
+        deleteItem.addActionListener(e -> {
+            int result = JOptionPane.showConfirmDialog(
+                ControllerFrame.this,
+                "Remove this token from the map?",
+                "Remove Token",
+                JOptionPane.YES_NO_OPTION,
+                JOptionPane.QUESTION_MESSAGE
+            );
+
+            if (result == JOptionPane.YES_OPTION) {
+                tokenOverlay.removeToken(token.getId());
+                if (selectedToken == token) {
+                    selectedToken = null;
+                }
+                imagePanel.repaint();
+                displayFrame.updateTokenOverlay(tokenOverlay);
+            }
+        });
+        contextMenu.add(deleteItem);
+
+        // Show menu at the clicked location
+        contextMenu.show(imagePanel, location.x, location.y);
     }
 
     private JPanel createControlPanel() {
@@ -296,6 +343,19 @@ public class ControllerFrame extends JFrame {
     private JMenuBar createMenuBar() {
         JMenuBar menuBar = new JMenuBar();
 
+        // Mass Import button
+        JButton massImportButton = new JButton("Mass Import");
+        massImportButton.addActionListener(e -> {
+            if (libraryPanel != null) {
+                libraryPanel.massImportImages();
+            }
+        });
+        massImportButton.setFocusPainted(false);
+        massImportButton.setBorderPainted(false);
+        massImportButton.setContentAreaFilled(false);
+        massImportButton.setCursor(new Cursor(Cursor.HAND_CURSOR));
+        menuBar.add(massImportButton);
+
         // About button
         JButton aboutButton = new JButton("About");
         aboutButton.addActionListener(e -> showAboutDialog());
@@ -331,7 +391,7 @@ public class ControllerFrame extends JFrame {
         titleLabel.setFont(new Font("Arial", Font.BOLD, 24));
         titleLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
 
-        JLabel versionLabel = new JLabel("Version 1.0.0");
+        JLabel versionLabel = new JLabel("Version 1.25.12");
         versionLabel.setFont(new Font("Arial", Font.PLAIN, 14));
         versionLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
 
@@ -396,14 +456,21 @@ public class ControllerFrame extends JFrame {
         helpText.setMargin(new Insets(10, 10, 10, 10));
         helpText.setFont(new Font("Monospaced", Font.PLAIN, 12));
         helpText.setText(
-            "EZBattleMap - Implemented Controls\n" +
-            "=================================\n\n" +
+            "EZBattleMap - User Guide\n" +
+            "========================\n\n" +
+
+            "MENU BAR:\n" +
+            "---------\n" +
+            "  Mass Import:          Import multiple images at once to active library\n" +
+            "  About:                View application information and version\n" +
+            "  Help:                 Display this help dialog\n\n" +
 
             "GENERAL CONTROLS:\n" +
             "-----------------\n" +
             "  Mode Selector:        Switch between 'Map Mode' and 'Token Mode'\n" +
             "  Select Image:         Load a new image from file system\n" +
             "  Square Size:          Adjust grid square size (1-2000 pixels)\n" +
+            "                        Grid size is saved per map\n" +
             "  Clear Selection:      Clear all selected grid cells\n\n" +
 
             "MAP MODE:\n" +
@@ -418,30 +485,50 @@ public class ControllerFrame extends JFrame {
             "-----------\n" +
             "  Left Click Token:     Select a token\n" +
             "  Drag Selected Token:  Move token to new grid position\n" +
-            "  Right Click Token:    Delete token (with confirmation)\n" +
+            "  Right Click Token:    Open context menu with options:\n" +
+            "    - Change Size:      Resize token (1x1, 2x2, or 3x3 grids)\n" +
+            "    - Delete Token:     Remove token with confirmation\n" +
             "  Drag from Library:    Place new token on map\n" +
             "  Click Empty Space:    Deselect current token\n\n" +
 
             "IMAGE LIBRARY:\n" +
             "--------------\n" +
+            "  Library Selector:     Switch between 'Maps' and 'Tokens' libraries\n" +
+            "  Search:               Find images by name, category, or tags\n" +
+            "  Category Filter:      Filter images by category\n" +
+            "  Add Image:            Import single image to library\n" +
+            "  Edit:                 Edit metadata (name, category, tags) for selected image\n" +
+            "  Delete:               Remove selected image from library\n" +
             "  Double-Click Map:     Load map image to display\n" +
-            "  Drag Token to Map:    Place token on the map\n" +
-            "  Add to Library:       Import images to your library\n" +
-            "  Organize:             Categorize and tag your images\n" +
-            "  Search:               Find images by name, category, or tags\n\n" +
+            "  Drag Token to Map:    Place token on the map\n\n" +
 
             "DISPLAY WINDOW:\n" +
             "---------------\n" +
-            "  The display window shows selected viewport to players\n" +
-            "  Red border indicates the visible area for players\n" +
-            "  Tokens are displayed on both controller and display windows\n\n" +
+            "  Shows selected viewport to players (fog of war)\n" +
+            "  Unselected grid cells appear black\n" +
+            "  Tokens are displayed without borders\n" +
+            "  Mouse Wheel:          Zoom in/out\n" +
+            "  Middle Mouse/Ctrl+Drag: Pan the view\n\n" +
+
+            "WORKFLOW:\n" +
+            "---------\n" +
+            "  1. Use Mass Import to add multiple maps and tokens to library\n" +
+            "  2. Organize images with categories and tags\n" +
+            "  3. Double-click a map to load it\n" +
+            "  4. Adjust Square Size to match your map grid\n" +
+            "  5. Use Map Mode to select areas visible to players\n" +
+            "  6. Switch to Token Mode to place and manage tokens\n" +
+            "  7. Right-click tokens to resize (1x1, 2x2, 3x3)\n" +
+            "  8. Players see only selected areas and tokens on Display window\n\n" +
 
             "TIPS:\n" +
             "-----\n" +
             "  - Grid size is saved per map and restored when reopened\n" +
-            "  - Use Map Mode to reveal areas to players\n" +
+            "  - Use Map Mode to reveal areas progressively during play\n" +
             "  - Use Token Mode to manage character/monster positions\n" +
-            "  - Organize your library with categories and tags for quick access\n"
+            "  - Organize library with categories for quick access\n" +
+            "  - Mass Import speeds up initial library setup\n" +
+            "  - Token sizes (1x1, 2x2, 3x3) useful for different creature sizes\n"
         );
 
         JScrollPane scrollPane = new JScrollPane(helpText);

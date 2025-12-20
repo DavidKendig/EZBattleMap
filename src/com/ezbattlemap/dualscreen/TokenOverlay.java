@@ -72,6 +72,17 @@ public class TokenOverlay {
     }
 
     /**
+     * Change the size of a token.
+     */
+    public void resizeToken(String tokenId, int gridWidth, int gridHeight) {
+        Token token = tokens.get(tokenId);
+        if (token != null) {
+            token.setGridWidth(gridWidth);
+            token.setGridHeight(gridHeight);
+        }
+    }
+
+    /**
      * Clear all tokens.
      */
     public void clearAll() {

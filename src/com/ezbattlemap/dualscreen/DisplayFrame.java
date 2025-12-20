@@ -230,11 +230,6 @@ class DisplayPanel extends JPanel {
 
                 // Draw token image
                 g2d.drawImage(tokenImg, screenX, screenY, screenWidth, screenHeight, null);
-
-                // Draw token border
-                g2d.setColor(new Color(255, 100, 100, 200));
-                g2d.setStroke(new BasicStroke(2));
-                g2d.drawRect(screenX, screenY, screenWidth, screenHeight);
             }
         }
     }
@@ -270,8 +265,8 @@ class DisplayPanel extends JPanel {
                     // Scale and offset for display
                     int displayX = offset.x + (int)(relX * scale);
                     int displayY = offset.y + (int)(relY * scale);
-                    int displayW = (int)(intersection.width * scale);
-                    int displayH = (int)(intersection.height * scale);
+                    int displayW = (int)Math.ceil(intersection.width * scale) + 1;
+                    int displayH = (int)Math.ceil(intersection.height * scale) + 1;
 
                     g2d.fillRect(displayX, displayY, displayW, displayH);
                 }
